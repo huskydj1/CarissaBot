@@ -68,3 +68,17 @@ class CarissaNet(nn.Module):
         out = self.bn2(out)
         out = self.fc(out)
         return out
+
+if __name__ == '__main__':
+    def get_n_params(model):
+        pp = 0
+        for p in list(model.parameters()):
+            nn=1
+            for s in list(p.size()):
+                nn = nn*s
+            pp += nn
+        return pp
+
+    net = CarissaNet(blocks=10, filters=128, se_channels=32)
+    print(net)
+    print(get_n_params(net))
