@@ -5,6 +5,7 @@
 *.csv
 *.bin
 *.pt
+*.args
 *__pycache__
 *Testing
 *build
