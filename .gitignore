@@ -1,2 +1,11 @@
 /cmake-build-debug/
 .idea/
+.vscode
+*env
+*.csv
+*.bin
+*.pt
+*__pycache__
+*Testing
+*build
+*CMakeFiles
