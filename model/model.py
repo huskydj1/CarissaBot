@@ -15,7 +15,7 @@ class SE_Block(nn.Module):
     def forward(self, x):
         b, c, _, _ = x.size()
         y = self.avg_pool(x).view(b, c)
-        y = self.fc(y).view(b, c, 1, 1)
+        y = self.fc(y).view(b, 2 * c, 1, 1)
         w = y[:, 0:self.filters, :, :]
         b = y[:, self.filters:2*self.filters, :, :]
         w = torch.sigmoid(w)
@@ -41,9 +41,9 @@ class ResidualBlock(nn.Module):
         return out
 
 class CarissaNet(nn.Module):
-    def __init__(self, blocks=20, filters=256, se_channels=32):
+    def __init__(self, input_channels=29, blocks=20, filters=256, se_channels=32):
         super().__init__()
-        self.conv1 = nn.Conv2d(29, filters, 3, padding=1, stride=1)
+        self.conv1 = nn.Conv2d(input_channels, filters, 3, padding=1, stride=1)
         self.bn1 = nn.BatchNorm2d(filters)
         
         self.residual_blocks = nn.ModuleList([ResidualBlock(filters, se_channels) for _ in range(blocks)])
@@ -66,6 +66,7 @@ class CarissaNet(nn.Module):
 
         out = self.conv2(out)
         out = self.bn2(out)
+        out = out.reshape(out.size()[0], -1)
         out = self.fc(out)
         return out
 

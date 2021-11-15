@@ -1,4 +1,5 @@
 import chess
+import torch
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -74,3 +75,56 @@ def convert_to_bitboard(fen):
             bitboard[layer+12, attack_rank, attack_file] = 1
 
     return bitboard
+
+def convert_to_bitboard_fast(fens):
+    # expect fens as a list of strings
+    # input: N * str
+    # of the form [board] [move] [castle] [castle] [en passant] [num moves]
+    # output: N * 29 * 8 * 8
+
+    # channel 0: whose move
+    # channels 1-24: pieces
+    # channel 25-28: castling
+
+    fens = list(map(lambda x: x.split(" ")[:3], fens))
+
+    turn_color = torch.Tensor([0 if x[1] == "w" else 1 for x in fens])
+    white_k = torch.Tensor(["K" in x[2] for x in fens]).float()
+    white_q = torch.Tensor(["Q" in x[2] for x in fens]).float()
+    black_k = torch.Tensor(["k" in x[2] for x in fens]).float()
+    black_q = torch.Tensor(["q" in x[2] for x in fens]).float()
+
+    fens = [x[0].split("/") for x in fens]
+
+    for i in range(1, 9):
+        fens = list(map(lambda y: list(map(lambda x: x.replace(str(i), "." * i), y)), fens))
+
+    fens = np.array([[list(y) for y in x] for x in fens])
+    fens_num = np.full(fens.shape, 0.0)
+
+    pieces = ['K', 'Q', 'B', 'R', 'N', 'P', 'k', 'q', 'b', 'r', 'n', 'p']
+
+    for it, piece in enumerate(pieces):
+        #fens_num[fens == pieces] = torch.full(fens_num[fens == pieces].size(), it + 1.0)
+        #mask = torch.where(fens == pieces)
+        print(fens.shape)
+        fens_num[fens == np.full(fens.shape, pieces)]# = it + 1.0
+        #fens_num[mask[0], mask[1]] = torch.full(torch.numel(mask[0]), it + 1.0)
+    fens_num = torch.Tensor(fens_num)
+
+    fens_stack = torch.full((fens_num.size()[0], 17, 8, 8))
+    for it, tensor in zip([0, 1, 2, 3, 4], [turn_color, white_k, white_q, black_k, black_q]):
+        fens_stack[:, it, :, :] = torch.swapaxes(tensor.repeat((8, 8, 1)), 0, 2)
+
+    for it, piece in enumerate(pieces):
+        fens_stack[:, it + 5, :, :] = (fens_num == it + 1).float() 
+
+    return fens_stack
+    
+
+    
+
+
+
+
+
