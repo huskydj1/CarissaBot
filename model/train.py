@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 import chess
 import torch
 from tqdm import tqdm
@@ -13,7 +14,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7" # TODO: add all GPUs to make para
 
 fast = False
 
-dataset = ChessDataset({"file_path": 'data/chessData.csv', "transform": True, "save": True, "fast": fast})
+dataset = ChessDataset({"file_path": 'data/random_evals.csv', "transform": True, "save": True, "fast": fast})
 
 train_len = int(len(dataset)*0.8)
 test_len = len(dataset) - train_len
@@ -34,7 +35,10 @@ if torch.cuda.is_available():
 loss_fn = torch.nn.MSELoss()
 optimizer = torch.optim.AdamW(model.parameters())
 
-for epoch in range(1, 101):
+train_losses = []
+test_losses = []
+
+for epoch in range(1, 61):
     model.train()
     sum_loss = 0
     for elem in tqdm(train_loader):
@@ -51,6 +55,7 @@ for epoch in range(1, 101):
 
     avg_loss = sum_loss / len(train_loader)
     print(f'Average Loss Epoch {epoch:5}: {avg_loss:10}')
+    train_losses.append(avg_loss)
 
     with torch.no_grad():
         model.eval()
@@ -62,6 +67,17 @@ for epoch in range(1, 101):
 
         avg_loss = sum_loss / len(test_loader)
         print(f'Average TEST Loss Epoch {epoch:5}: {avg_loss:10}')
+        test_losses.append(avg_loss)
 
     if epoch % 5 == 0:
-        torch.save(model.state_dict(), f'model_{epoch}.pt')
+        torch.save(model.state_dict(), f'model_111421_{epoch}.pt')
+
+x = list(range(1, 61))
+
+plt.plot(x, train_losses, label='Train Loss')
+plt.plot(x, test_losses, label='Test Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('Loss vs. Epoch')
+plt.legend()
+plt.savefig('loss_plot_111421.png')
