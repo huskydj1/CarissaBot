@@ -25,7 +25,7 @@ train_loader = torch.utils.data.DataLoader(data_train, batch_size=2048, shuffle=
 test_loader = torch.utils.data.DataLoader(data_test, batch_size=2048, shuffle=True)
 
 if not fast:
-    model = torch.nn.DataParallel(CarissaNet(input_channels=29, blocks=10, filters=128))
+    model = torch.nn.DataParallel(CarissaNet(input_channels=29, blocks=6, filters=50))
 else:
     model = torch.nn.DataParallel(CarissaNet(input_channels=25, blocks=10, filters=128))
 
@@ -70,7 +70,7 @@ for epoch in range(1, 61):
         test_losses.append(avg_loss)
 
     if epoch % 5 == 0:
-        torch.save(model.state_dict(), f'model_111421_{epoch}.pt')
+        torch.save(model.state_dict(), f'model_111621_6x50_{epoch}.pt')
 
 x = list(range(1, 61))
 
@@ -80,4 +80,4 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Loss vs. Epoch')
 plt.legend()
-plt.savefig('loss_plot_111421.png')
+plt.savefig('loss_plot_111621_6x50.png')

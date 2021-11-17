@@ -80,6 +80,6 @@ if __name__ == '__main__':
             pp += nn
         return pp
 
-    net = CarissaNet(blocks=10, filters=128, se_channels=32)
+    net = CarissaNet(blocks=6, filters=50, se_channels=32)
     print(net)
     print(get_n_params(net))
