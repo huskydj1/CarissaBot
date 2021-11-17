@@ -1,4 +1,3 @@
-# Carissa Bot
-## Created in CSC630 at PA
+**The code uses [THC Chess Library](https://github.com/billforsternz/thc-chess-library). "thc.cpp", "thc.h", and "demo.cpp" are all copied from that directory.**
 
-**The code uses [pjpuzzler's C++ implementation of python-chess](https://github.com/pjpuzzler/cpp-chess). "chess.cpp" and "chess.h" are both copied from that directory. The only changes made to those files was rewriting all unsigned long int references to unsigned long long int.**
+This code was designed using the MSVC Compiler so make sure to set the environmental variables correctly, as laid out in CMakeLists.txt.

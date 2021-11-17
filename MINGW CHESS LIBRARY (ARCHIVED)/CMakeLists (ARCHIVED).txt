@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.15)
+project(CarissaBot)
+
+set(CMAKE_CXX_STANDARD 20)
+
+include_directories(${PROJECT_SOURCE_DIR})
+add_executable(Chess_Bot "MINGW CHESS LIBRARY (ARCHIVED)/main.cpp")
+add_executable(tester "MINGW CHESS LIBRARY (ARCHIVED)/tester.cpp")
+
+#[[
+For MINGW:
+Environmental Variables:
+CXX: D:\MinGW\MinGW\bin\g++.exe
+PATH: D:\MinGW\MinGW\bin
+]]

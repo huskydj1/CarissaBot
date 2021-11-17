@@ -1,0 +1,3 @@
+**The code uses [pjpuzzler's C++ implementation of python-chess](https://github.com/pjpuzzler/cpp-chess). "chess.cpp" and "chess.h" are both copied from that directory. The only changes made to those files was rewriting all unsigned long int references to unsigned long long int.**
+
+This library was created using MINGW. As a result, it doesn't run on MSVC, which is required for LibTorch, since it doesn't have the "bit" file. It was archived for this reason. In the case of future usage, make sure to set the environmental variables correctly as laid out in CMakeLists (ARCHIVED).txt.
