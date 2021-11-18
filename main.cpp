@@ -1,6 +1,6 @@
 #include <iostream>
 #include "thc.cpp"
-#include "thc.h"
+using namespace std;
 
 int main() {
     std::cout << "Hello, World!" << std::endl;

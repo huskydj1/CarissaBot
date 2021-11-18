@@ -4,7 +4,8 @@ project(CarissaBot)
 set(CMAKE_CXX_STANDARD 20)
 
 include_directories(${PROJECT_SOURCE_DIR})
-add_executable(Chess_Bot demo.cpp)
+add_executable(Demo demo.cpp)
+add_executable(Chess_Bot main.cpp)
 
 #[[
 For MSVC:
