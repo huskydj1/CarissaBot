@@ -133,36 +133,11 @@ def convert_to_bitboard(fen):
             attack_rank, attack_file = divmod(sq,8)
             boards[layer+12, attack_rank, attack_file] += 1 # could experiment with = 1 instead of += 1
 
-    # print(piece_map)
-
-    # print(list(boards))
-
     return np.array(boards)
 
-# piece_to_material = {
-#     'R': 5,
-#     'N': 3,
-#     'B': 3,
-#     'Q': 9,
-#     'K': 0,
-#     'P': 1,
-#     'p': -1,
-#     'k': 0,
-#     'q': -9,
-#     'b': -3,
-#     'n': -3,
-#     'r': -5
-# }
+model = CarissaNet(blocks=8, filters=64)
 
-# should carry material eval down the tree
-
-# def material_eval(board):
-#     pieces = board.piece_map()
-#     return sum([piece_to_material[piece.symbol()] for piece in pieces.values()])
-
-model = CarissaNet(blocks=10, filters=128)
-
-sdict = torch.load('../model/model_40.pt', map_location='cpu')
+sdict = torch.load('../model/model_111721_newdata_8x64_30.pt', map_location='cpu')
 for key in list(sdict.keys()):
     if key.startswith("module."):
         sdict[key[7:]] = sdict.pop(key)
@@ -175,14 +150,6 @@ if torch.cuda.is_available():
 model.eval()
 
 def predict_model(board):
-    if board.is_stalemate() or board.is_seventyfive_moves() or board.is_insufficient_material() or board.is_fivefold_repetition():
-        return 0
-    
-    if board.is_checkmate():
-        if board.turn == chess.WHITE:
-            return 1e10
-        else:
-            return -1e10
 
     encoding = convert_to_bitboard(board.fen())
     with torch.no_grad():
@@ -190,17 +157,24 @@ def predict_model(board):
         if torch.cuda.is_available():
             encoding = encoding.cuda()
         output = model(torch.unsqueeze(encoding, dim=0))
-        # print(output.item(), convert_to_pawn_advantage(output.item()))
-    
 
     return output.item()
 
 def tree_search(board, depth, alpha, beta, maximizing_player):
     if depth == 0 or board.is_game_over():
+        if board.is_stalemate() or board.is_seventyfive_moves() or board.is_insufficient_material() or board.is_fivefold_repetition():
+            return 0
+    
+        if board.is_checkmate():
+            if board.turn == chess.WHITE:
+                return 1e8
+            else:
+                return -1e8
+        
         return predict_model(board)
 
     if maximizing_player:
-        value = -1000000
+        value = -1e10
         for move in board.legal_moves:
             board.push(move)
             value = max(value, tree_search(board, depth-1, alpha, beta, False))
@@ -210,7 +184,7 @@ def tree_search(board, depth, alpha, beta, maximizing_player):
                 break
         return value
     else:
-        value = 1000000
+        value = 1e10
         for move in board.legal_moves:
             board.push(move)
             value = min(value, tree_search(board, depth-1, alpha, beta, True))
@@ -237,12 +211,12 @@ class BotPlayer:
         print('Computing move.')
 
         depth = 1
-        best_value = 1000000
+        best_value = 1e10
         for move in board.legal_moves:
             board.push(move)
-            value = tree_search(board, depth, -1000000, 1000000, True)
+            value = tree_search(board, depth, -1e10, 1e10, True)
             board.pop()
-            # print(move, 100*prob_to_pawn_advantage(value))
+            print(move, value)
 
             if value < best_value:
                 best_value = value
