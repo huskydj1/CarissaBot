@@ -3,9 +3,9 @@ from model import CarissaNet
 import data_manip
 from data_manip import convert_to_bitboard
 
-model = CarissaNet(blocks=10, filters=128, se_channels=32)
+model = CarissaNet(blocks=8, filters=64, se_channels=32)
 
-sdict = torch.load('models/model_20_leela.pt', map_location='cpu')
+sdict = torch.load('models/model_111721_newdata_8x64_35.pt', map_location='cpu')
 for key in list(sdict.keys()):
     if key.startswith("module."):
         sdict[key[7:]] = sdict.pop(key)
@@ -22,4 +22,4 @@ model_input = torch.unsqueeze(torch.Tensor(convert_to_bitboard(fen)), 0)
 traced_script_module = torch.jit.trace(model, example)
 # print(traced_script_module(model_input))
 
-traced_script_module.save('models/traced_model_20_leela.pt')
+traced_script_module.save('models/traced_model_111721_newdata_8x64_35.pt')
