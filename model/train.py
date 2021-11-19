@@ -14,7 +14,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7" # TODO: add all GPUs to make para
 
 fast = False
 
-dataset = ChessDataset({"file_path": 'data/random_evals.csv', "transform": True, "save": True, "fast": fast})
+dataset = ChessDataset({"file_path": 'data/newChessData.csv', "transform": True, "save": True, "fast": fast})
 
 train_len = int(len(dataset)*0.8)
 test_len = len(dataset) - train_len
@@ -25,7 +25,7 @@ train_loader = torch.utils.data.DataLoader(data_train, batch_size=2048, shuffle=
 test_loader = torch.utils.data.DataLoader(data_test, batch_size=2048, shuffle=True)
 
 if not fast:
-    model = torch.nn.DataParallel(CarissaNet(input_channels=29, blocks=6, filters=50))
+    model = torch.nn.DataParallel(CarissaNet(input_channels=29, blocks=10, filters=128))
 else:
     model = torch.nn.DataParallel(CarissaNet(input_channels=25, blocks=10, filters=128))
 
@@ -44,8 +44,14 @@ for epoch in range(1, 61):
     for elem in tqdm(train_loader):
         optimizer.zero_grad()
 
-        output = model(elem['input'])
-        loss = loss_fn(output, elem['output'])
+        data_input = elem['input']
+        data_output = elem['output']
+        if torch.cuda.is_available():
+            data_input = data_input.cuda()
+            data_output = data_output.cuda()
+
+        output = model(data_input)
+        loss = loss_fn(output, data_output)
         sum_loss += loss.item()
 
         loss.backward()
@@ -61,8 +67,13 @@ for epoch in range(1, 61):
         model.eval()
         sum_loss = 0
         for elem in tqdm(test_loader):
-            output = model(elem['input'])
-            loss = loss_fn(output, elem['output'])
+            data_input = elem['input']
+            data_output = elem['output']
+            if torch.cuda.is_available():
+                data_input = data_input.cuda()
+                data_output = data_output.cuda()
+            output = model(data_input)
+            loss = loss_fn(output, data_output)
             sum_loss += loss.item()
 
         avg_loss = sum_loss / len(test_loader)
@@ -70,7 +81,7 @@ for epoch in range(1, 61):
         test_losses.append(avg_loss)
 
     if epoch % 5 == 0:
-        torch.save(model.state_dict(), f'model_111621_6x50_{epoch}.pt')
+        torch.save(model.state_dict(), f'model_111821_newdata_10x128_{epoch}.pt')
 
 x = list(range(1, 61))
 
@@ -80,4 +91,4 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Loss vs. Epoch')
 plt.legend()
-plt.savefig('loss_plot_111621_6x50.png')
+plt.savefig('loss_plot_111821_newdata_10x128.png')

@@ -27,10 +27,6 @@ class ChessDataset:
                 self.fens = data_manip.convert_to_bitboard_fast(df['FEN'].tolist())
             self.evals = torch.Tensor(df['Evaluation']).reshape(-1,1)
 
-            if torch.cuda.is_available():
-                self.fens = self.fens.cuda()
-                self.evals = self.evals.cuda()
-            
             if args["save"]:
                 torch.save({
                     "fens": self.fens,
