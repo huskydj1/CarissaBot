@@ -51,13 +51,13 @@ float evaluatePosition(Board board){
 }
 
 pair<Move, float> dfs(Board board, int height, float alpha, float beta, bool alphaTurn, Move prevMove = MOVE_NULL){ //Return moves as well
-    if(height==0 || board.is_game_over(true)){ # At the bottom of the search tree or the game is over
+    if(height==0 || board.is_game_over(true)){ // At the bottom of the search tree or the game is over
         return make_pair(prevMove, evaluatePosition(board));
     }
-    else if (alphaTurn){ # White's turn
+    else if (alphaTurn){ // White's turn
         float maxEval = MIN_EVAL;
         Move maxMove = prevMove;
-        for(Move move : board.generate_legal_moves()){ # Generate all legal moves (which is to say all children of the current node)
+        for(Move move : board.generate_legal_moves()){ // Generate all legal moves (which is to say all children of the current node)
             board.push(move);
             float eval = dfs(board, height - 1, alpha, beta, false, move).second; # Explore this path
             board.pop();
