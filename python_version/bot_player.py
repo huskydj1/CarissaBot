@@ -167,9 +167,9 @@ def tree_search(board, depth, alpha, beta, maximizing_player):
     
         if board.is_checkmate():
             if board.turn == chess.WHITE:
-                return 1e8
-            else:
                 return -1e8
+            else:
+                return 1e8
         
         return predict_model(board)
 
