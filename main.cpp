@@ -152,17 +152,26 @@ void play_OneComputerOneHuman(ChessRules &board, bool whiteFlag){
 
         if(whiteFlag==board.WhiteToPlay()){ // Bot's Turn
             float eval = dfs(board, 2, MIN_EVAL, MAX_EVAL, whiteFlag);
-            cout << "BOT PLAYS: " << bestMove.NaturalOut(&board) << endl;
+            cout << "BOT PLAYS: " << bestMove.NaturalOut(&board) << endl << endl;
         }
         else { // Player's Move
             string san;
             cout << "Enter Move: ";
+
+            vector<Move> moves;
+            board.GenLegalMoveList(moves);
             while (true) {
                 cin >> san;
                 cout << endl;
                 try {
                     bestMove.NaturalIn(&board, san.c_str());
-                    bool moveIsLegal = bestMove.Valid();
+                    bool moveIsLegal = false;
+                    for (Move move : moves){
+                        if(bestMove == move){
+                            moveIsLegal = true;
+                            break;
+                        }
+                    }
 
                     if (!moveIsLegal) {
                         throw invalid_argument("");
