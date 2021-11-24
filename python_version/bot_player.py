@@ -135,9 +135,9 @@ def convert_to_bitboard(fen):
 
     return np.array(boards)
 
-model = CarissaNet(blocks=8, filters=64)
+model = CarissaNet(blocks=10, filters=128)
 
-sdict = torch.load('../model/model_111721_newdata_8x64_30.pt', map_location='cpu')
+sdict = torch.load('../model/model_112021_bigdata_10x128_40.pt', map_location='cpu')
 for key in list(sdict.keys()):
     if key.startswith("module."):
         sdict[key[7:]] = sdict.pop(key)

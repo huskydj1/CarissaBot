@@ -5,7 +5,8 @@ from human_player import HumanPlayer
 from bot_player import BotPlayer
 
 if __name__ == "__main__":
-    board = chess.Board('rnb1k1nr/pppp1ppp/8/2b1p3/4P2q/PPP5/3P1PPP/RNBQKBNR b KQkq - 0 4')
+    # board = chess.Board('rnb1k1nr/pppp1ppp/8/2b1p3/4P2q/PPP5/3P1PPP/RNBQKBNR b KQkq - 0 4')
+    board = chess.Board()
     player1 = HumanPlayer(chess.WHITE)
     player2 = BotPlayer(chess.BLACK)
     while True:
