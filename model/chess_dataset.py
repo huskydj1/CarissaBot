@@ -4,14 +4,17 @@ import pandas as pd
 import os
 import json
 import torch
+from tqdm import tqdm
 
 import data_manip
+
+tqdm.pandas()
 
 class ChessDataset:
     def __init__(self, args):
         df = pd.read_csv(args["file_path"])
         if args["transform"]:
-            df['Evaluation'] = df['Evaluation'].apply(data_manip.eval_to_pawn).apply(data_manip.pawn_to_prob)
+            df['Evaluation'] = df['Evaluation'].progress_apply(data_manip.eval_to_pawn).apply(data_manip.pawn_to_prob)
 
         cache_dir = "data/cached_data." if not args["fast"] else "data/cached_data_fast."
 
@@ -21,7 +24,8 @@ class ChessDataset:
            self.evals = load["evals"]
         else:
             if not args["fast"]:
-                self.fens = torch.Tensor(np.array([*map(data_manip.convert_to_bitboard, df['FEN'])]))
+                df['FEN'] = df['FEN'].progress_apply(data_manip.convert_to_bitboard)
+                self.fens = torch.Tensor(np.array(list(df['FEN'])))
                 print(self.fens.size(), "fens size")
             else:
                 self.fens = data_manip.convert_to_bitboard_fast(df['FEN'].tolist())

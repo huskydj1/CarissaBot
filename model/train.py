@@ -14,15 +14,15 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7" # TODO: add all GPUs to make para
 
 fast = False
 
-dataset = ChessDataset({"file_path": 'data/newChessData.csv', "transform": True, "save": True, "fast": fast})
+dataset = ChessDataset({"file_path": 'data/bigChessData.csv', "transform": True, "save": True, "fast": fast})
 
 train_len = int(len(dataset)*0.8)
 test_len = len(dataset) - train_len
 
 data_train, data_test = torch.utils.data.random_split(dataset, [train_len, test_len])
 
-train_loader = torch.utils.data.DataLoader(data_train, batch_size=2048, shuffle=True)
-test_loader = torch.utils.data.DataLoader(data_test, batch_size=2048, shuffle=True)
+train_loader = torch.utils.data.DataLoader(data_train, batch_size=4096, shuffle=True)
+test_loader = torch.utils.data.DataLoader(data_test, batch_size=4096, shuffle=True)
 
 if not fast:
     model = torch.nn.DataParallel(CarissaNet(input_channels=29, blocks=10, filters=128))
@@ -41,7 +41,7 @@ test_losses = []
 for epoch in range(1, 61):
     model.train()
     sum_loss = 0
-    for elem in tqdm(train_loader):
+    for elem in train_loader:
         optimizer.zero_grad()
 
         data_input = elem['input']
@@ -81,7 +81,7 @@ for epoch in range(1, 61):
         test_losses.append(avg_loss)
 
     if epoch % 5 == 0:
-        torch.save(model.state_dict(), f'model_111821_newdata_10x128_{epoch}.pt')
+        torch.save(model.state_dict(), f'model_112021_bigdata_10x128_{epoch}.pt')
 
 x = list(range(1, 61))
 
@@ -91,4 +91,4 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Loss vs. Epoch')
 plt.legend()
-plt.savefig('loss_plot_111821_newdata_10x128.png')
+plt.savefig('loss_plot_112021_bigdata_10x128.png')
