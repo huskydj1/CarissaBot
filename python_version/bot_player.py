@@ -3,92 +3,11 @@ import chess.polyglot
 import random
 import numpy as np
 import torch
-import torch.nn as nn
 import math
 import time
-from math import log10
 
-
-class SE_Block(nn.Module):
-    def __init__(self, filters, se_channels):
-        super().__init__()
-        self.filters = filters
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.fc = nn.Sequential(
-            nn.Linear(filters, se_channels),
-            nn.ReLU(inplace=True),
-            nn.Linear(se_channels, 2*filters),
-        )
-
-    def forward(self, x):
-        b, c, _, _ = x.size()
-        y = self.avg_pool(x).view(b, c)
-        y = self.fc(y).view(b, 2*c, 1, 1)
-        w = y[:, 0:self.filters, :, :]
-        b = y[:, self.filters:2*self.filters, :, :]
-        w = torch.sigmoid(w)
-        return x * w.expand_as(x) + b.expand_as(x)
-
-class ResidualBlock(nn.Module):
-    def __init__(self, filters, se_channels):
-        super().__init__()
-        self.conv1 = nn.Conv2d(filters, filters, 3, padding=1, stride=1)
-        self.bn1 = nn.BatchNorm2d(filters)
-        self.conv2 = nn.Conv2d(filters, filters, 3, padding=1, stride=1)
-        self.bn2 = nn.BatchNorm2d(filters)
-        self.se = SE_Block(filters, se_channels)
-    
-    def forward(self, x):
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.se(out)
-        out = out + x
-        out = torch.relu(out)
-        return out
-
-class CarissaNet(nn.Module):
-    def __init__(self, blocks=20, filters=256, se_channels=32):
-        super().__init__()
-        self.conv1 = nn.Conv2d(29, filters, 3, padding=1, stride=1)
-        self.bn1 = nn.BatchNorm2d(filters)
-        
-        self.residual_blocks = nn.ModuleList([ResidualBlock(filters, se_channels) for _ in range(blocks)])
-
-        self.conv2 = nn.Conv2d(filters, 32, 3, padding=1, stride=1)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.fc = nn.Sequential(
-            nn.Linear(32*8*8, 128),
-            nn.ReLU(inplace=True),
-            nn.Linear(128, 1),
-            nn.Tanh()
-        )
-
-    def forward(self, x):
-        out = self.conv1(x)
-        out = self.bn1(out)
-
-        for block in self.residual_blocks:
-            out = block(out)
-
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = out.reshape((out.size()[0], -1))
-        out = self.fc(out)
-        return out
-
-def pawn_advantage_to_prob(adv):
-    if adv < -1000:
-        return 0
-    return 1/(1+10**(adv/(-4)))
-
-def prob_to_pawn_advantage(prob):
-    if prob < 1e-10:
-        return -100000
-    if prob > 1-1e-10:
-        return 100000
-    return 4*log10(prob/(1-prob))
+from model import CarissaNet
+# from data_manip import pawn_to_prob, prob_to_pawn
 
 piece_to_layer = {
     'R': 1,
@@ -125,9 +44,9 @@ def convert_to_bitboard(fen):
 
     piece_map = board.piece_map()
     for i, p in piece_map.items():
-        rank, file = divmod(i,8)
+        piece_rank, piece_file = divmod(i,8)
         layer = piece_to_layer[p.symbol()]
-        boards[layer, rank, file] = 1
+        boards[layer, piece_rank, piece_file] = 1
 
         for sq in board.attacks(i):
             attack_rank, attack_file = divmod(sq,8)
@@ -150,20 +69,102 @@ if torch.cuda.is_available():
 model.eval()
 
 def predict_model(board):
-
     encoding = convert_to_bitboard(board.fen())
     with torch.no_grad():
-        encoding = torch.Tensor(encoding)
+        encoding = torch.unsqueeze(torch.Tensor(encoding), dim=0)
         if torch.cuda.is_available():
             encoding = encoding.cuda()
-        output = model(torch.unsqueeze(encoding, dim=0))
-
+        output = model(encoding)
+    # print(encoding.size())
     return output.item()
+
+def predict_model_batched(board):
+    if board.turn == chess.WHITE:
+        start = True
+        stalemate = False
+        for move in board.legal_moves:
+            board.push(move)
+            if not stalemate:
+                if board.is_stalemate() or board.is_seventyfive_moves() or board.is_insufficient_material() or board.is_fivefold_repetition():
+                    stalemate = True
+                    board.pop()
+                    continue
+
+            if board.is_checkmate():
+                if board.turn == chess.BLACK:
+                    board.pop()
+                    return 1e8
+                else:
+                    board.pop()
+                    continue
+
+            if start:
+                encodings = convert_to_bitboard(board.fen())
+                encodings = torch.unsqueeze(torch.Tensor(encodings), dim=0)
+                start = False
+            else:
+                encoding = convert_to_bitboard(board.fen())
+                encoding = torch.unsqueeze(torch.Tensor(encoding), dim=0)
+                encodings = torch.cat((encodings, encoding), dim=0)
+
+            board.pop()
+
+        if start:
+            if stalemate:
+                return 0.5
+            return -1e8
+
+        if torch.cuda.is_available():
+            encodings = encodings.cuda()
+        # print(encodings.size())
+        outputs = model(encodings)
+        return torch.max(outputs).item()
+
+    else:
+        start = True
+        stalemate = False
+        for move in board.legal_moves:
+            board.push(move)
+            if not stalemate:
+                if board.is_stalemate() or board.is_seventyfive_moves() or board.is_insufficient_material() or board.is_fivefold_repetition():
+                    stalemate = True
+                    board.pop()
+                    continue
+
+            if board.is_checkmate():
+                if board.turn == chess.WHITE:
+                    board.pop()
+                    return -1e8
+                else:
+                    board.pop()
+                    continue
+
+            if start:
+                encodings = convert_to_bitboard(board.fen())
+                encodings = torch.unsqueeze(torch.Tensor(encodings), dim=0)
+                start = False
+            else:
+                encoding = convert_to_bitboard(board.fen())
+                encoding = torch.unsqueeze(torch.Tensor(encoding), dim=0)
+                encodings = torch.cat((encodings, encoding), dim=0)
+
+            board.pop()
+
+        if start:
+            if stalemate:
+                return 0.5
+            return -1e8
+
+        if torch.cuda.is_available():
+            encodings = encodings.cuda()
+
+        outputs = model(encodings)
+        return torch.min(outputs).item()
 
 def tree_search(board, depth, alpha, beta, maximizing_player):
     if depth == 0 or board.is_game_over():
         if board.is_stalemate() or board.is_seventyfive_moves() or board.is_insufficient_material() or board.is_fivefold_repetition():
-            return 0
+            return 0.5
     
         if board.is_checkmate():
             if board.turn == chess.WHITE:
@@ -171,7 +172,7 @@ def tree_search(board, depth, alpha, beta, maximizing_player):
             else:
                 return 1e8
         
-        return predict_model(board)
+        return predict_model_batched(board)
 
     if maximizing_player:
         value = -1e10
@@ -226,6 +227,59 @@ class BotPlayer:
         return best_move
 
 if __name__ == '__main__':
-    board = chess.Board('2q3k1/p2n1ppp/4pn2/1pb5/4PB2/P2N1PP1/1PrN3P/2R2QK1 w - - 4 26')
-    a1 = time.time()
+    board = chess.Board('rnb1k1nr/1pp1b2p/p1q1p1p1/3NB1Q1/3P4/4P3/PPP2PPP/R3KB1R b KQkq - 0 11')
+    start = True
     print(predict_model(board))
+
+    print(time.time())
+    num = 0
+    total = 0
+    should_break = False
+    for move in board.legal_moves:
+        board.push(move)
+        for second_move in board.legal_moves:
+            board.push(second_move)
+            num += 1
+            num_moves = len(list(board.legal_moves))
+            total += num_moves
+            print(num_moves, num)
+            if num > 100:
+                print(total)
+                should_break = True
+                break
+            for third_move in board.legal_moves:
+                board.push(third_move)    
+                if start:
+                    encodings = convert_to_bitboard(board.fen())
+                    encodings = torch.unsqueeze(torch.Tensor(encodings), dim=0)
+                    start = False
+                else:
+                    encoding = convert_to_bitboard(board.fen())
+                    encoding = torch.unsqueeze(torch.Tensor(encoding), dim=0)
+                    encodings = torch.cat((encodings, encoding), dim=0)
+                board.pop()
+            board.pop()
+        board.pop()
+        if should_break:
+            break
+    print(time.time())
+
+    if torch.cuda.is_available():
+        encodings = encodings.cuda()
+    print(time.time())
+    outputs = model(encodings)
+    
+    print(time.time())
+
+    print(encodings.size())
+    print(outputs.size())
+
+    # print(time.time())
+    # print(predict_model(board))
+    # print(time.time())
+    # print(predict_model(board))
+    # print(time.time())
+    # print(predict_model_batched(board))
+    # print(time.time())
+    # print(predict_model_batched(board))
+    # print(time.time())
